@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:practise_app/services/api_service.dart';
 import 'package:practise_app/screens/home_screen.dart';
@@ -32,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen>
     _animController.dispose();
     super.dispose();
   }
-
+//logic of login 
 void _onLogin() async {
   if (_formKey.currentState!.validate()) {
     final email = _emailController.text.trim();
@@ -42,7 +43,6 @@ void _onLogin() async {
       if (response.statusCode == 200) {
         final responseData = response.data;
 
-        //extract token from response
         final accessToken = responseData['access'] ?? responseData['user']['access'];
 
         await TokenService.saveToken(accessToken);
@@ -58,9 +58,29 @@ void _onLogin() async {
         );
         final token = await TokenService.getToken();
 
-        print("before logout: $token"); 
-
+        print("before logout: $token");
       }
+    } on DioException catch (e) {
+      String errorMessage = 'Login failed';
+
+      if (e.response != null) {
+        final statusCode = e.response?.statusCode;
+        final responseData = e.response?.data;
+
+        if (statusCode == 404 || responseData.toString().contains("User not found")) {
+          errorMessage = 'Login failed: User does not exist. Please sign up first.';
+        } else if (statusCode == 400) {
+          errorMessage = 'Invalid login request.';
+        } else {
+          errorMessage = 'Login failed: ${responseData['message'] ?? 'Unknown error'}';
+        }
+      } else {
+        errorMessage = 'Network error: ${e.message}';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login failed: ${e.toString()}')),
@@ -68,6 +88,7 @@ void _onLogin() async {
     }
   }
 }
+
 
 
   @override
