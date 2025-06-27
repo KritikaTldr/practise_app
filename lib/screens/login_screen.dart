@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:practise_app/services/api_service.dart';
-import 'package:practise_app/screens/home_screen.dart';
 import 'package:practise_app/services/token_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -52,10 +51,7 @@ void _onLogin() async {
         );
 
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        Navigator.pushReplacementNamed(context, '/all-products');
         final token = await TokenService.getToken();
 
         print("before logout: $token");

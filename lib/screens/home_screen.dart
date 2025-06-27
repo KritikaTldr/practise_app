@@ -1,6 +1,11 @@
+// ignore_for_file: unused_import, unreachable_switch_default
+
 import 'package:flutter/material.dart';
 import 'package:practise_app/services/fakeapi_service.dart';
-import 'package:practise_app/screens/product_screen.dart'; // Import the ProductScreen
+import 'package:practise_app/screens/product_screen.dart';
+import 'package:practise_app/widgets/nav_bar.dart';
+import 'package:practise_app/services/token_service.dart';
+import 'package:toastification/toastification.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final response = await FakeApiService.getAllProducts();
       setState(() {
         _products = response.data;
-        _isHovered = List.generate(response.data.length, (_) => false); // initialize hover state
+        _isHovered = List.generate(response.data.length, (_) => false);
         _isCartHovered = List.generate(response.data.length, (_) => false);
         _loading = false;
       });
@@ -38,22 +43,65 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void showToast(BuildContext context, String title, String description, ToastificationType type) {
+    Icon icon;
+    switch (type) {
+      case ToastificationType.success:
+        icon = const Icon(Icons.check_circle, color: Colors.white, size: 28);
+        break;
+      case ToastificationType.info:
+        icon = const Icon(Icons.info, color: Colors.white, size: 28);
+        break;
+      case ToastificationType.warning:
+        icon = const Icon(Icons.warning, color: Colors.white, size: 28);
+        break;
+      case ToastificationType.error:
+        icon = const Icon(Icons.error, color: Colors.white, size: 28);
+        break;
+      default:
+        icon = const Icon(Icons.notifications, color: Colors.white, size: 28);
+    }
+
+    toastification.show(
+      context: context,
+      type: type,
+      style: ToastificationStyle.fillColored,
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      description: Text(
+        description,
+        style: const TextStyle(
+          fontSize: 18,
+        ),
+      ),
+      icon: icon,
+      alignment: Alignment.topRight,
+      autoCloseDuration: const Duration(seconds: 3),
+      animationDuration: const Duration(milliseconds: 300),
+      showProgressBar: true,
+      closeButtonShowType: CloseButtonShowType.always,
+      dragToClose: true,
+      pauseOnHover: true,
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Products', style: TextStyle(color: Colors.black)),
-        backgroundColor: Color(0xFFFEF7FF), 
-        elevation: 2,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
+      appBar: const NavBar(),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.only(left: 60.0, right: 60.0, bottom: 50.0),
               child: GridView.builder(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 400, 
+                  maxCrossAxisExtent: 400,
                   mainAxisSpacing: 5,
                   childAspectRatio: 0.8,
                 ),
@@ -62,15 +110,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   final product = _products[index];
                   return GestureDetector(
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ProductScreen(productId: product['id']),
-                        ),
-                      );
+                      Navigator.pushNamed(context, '/all-products/${product['id']}');
                     },
                     child: MouseRegion(
-                      cursor: SystemMouseCursors.click, // 👈 This shows the hand cursor
+                      cursor: SystemMouseCursors.click,
                       onEnter: (_) => setState(() => _isHovered[index] = true),
                       onExit: (_) => setState(() => _isHovered[index] = false),
                       child: AnimatedScale(
@@ -124,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         Text(
                                           "\$${product['price']}",
                                           style: const TextStyle(
-                                            fontSize: 18,
+                                            fontSize: 20,
                                             color: Colors.green,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -132,24 +175,44 @@ class _HomeScreenState extends State<HomeScreen> {
                                         MouseRegion(
                                           onEnter: (_) => setState(() => _isCartHovered[index] = true),
                                           onExit: (_) => setState(() => _isCartHovered[index] = false),
-                                          child: AnimatedContainer(
-                                            duration: const Duration(milliseconds: 180),
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              boxShadow: _isCartHovered[index]
-                                                  ? [
-                                                      BoxShadow(
-                                                        color: Colors.deepOrange.withOpacity(0.4),
-                                                        blurRadius: 12,
-                                                        spreadRadius: 1,
-                                                      ),
-                                                    ]
-                                                  : [],
-                                            ),
-                                            child: Icon(
-                                              Icons.shopping_cart_outlined,
-                                              size: 28,
-                                              color: Colors.deepOrange,
+                                          child: GestureDetector(
+                                            onTap: () async {
+                                              final token = await TokenService.getToken();
+                                              if (token == null) {
+                                                showToast(
+                                                  context,
+                                                  'Login Required',
+                                                  'Please login or signup to add items to the cart.',
+                                                  ToastificationType.info,
+                                                );
+                                              } else {
+                                                showToast(
+                                                  context,
+                                                  'Added to Cart',
+                                                  'An item was added to your cart!',
+                                                  ToastificationType.success,
+                                                );
+                                              }
+                                            },
+                                            child: AnimatedContainer(
+                                              duration: const Duration(milliseconds: 180),
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                boxShadow: _isCartHovered[index]
+                                                    ? [
+                                                        BoxShadow(
+                                                          color: Colors.deepOrange.withOpacity(0.4),
+                                                          blurRadius: 12,
+                                                          spreadRadius: 1,
+                                                        ),
+                                                      ]
+                                                    : [],
+                                              ),
+                                              child: const Icon(
+                                                Icons.shopping_cart_outlined,
+                                                size: 28,
+                                                color: Colors.deepOrange,
+                                              ),
                                             ),
                                           ),
                                         ),
